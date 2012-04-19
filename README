@@ -1,0 +1,56 @@
+前提条件
+1. 需要依赖于ASIHttpRequest
+
+
+使用说明
+参考AppCell类
+
+1.头文件
+#import "ImageDownloader.h"
+#import "ImageDownloadReceiver.h"
+
+2. 定义全局变量
+    UIImage *_image; // 存放下载图片的变量
+    ImageDownloadReceiver *_imageDownloadReceiver; //图片下载接受器
+    
+3. 构造函数中实例化接收器
+	_imageDownloadReceiver = [[ImageDownloadReceiver alloc]initWithContainer:self];    
+    
+4. 对应的析构函数
+
+- (void)dealloc
+{
+    _imageDownloadReceiver.imageContainer = nil;
+    [_imageDownloadReceiver release];
+    [_image release];
+    [super dealloc];
+}
+
+5. 下载图片
+	// 插到下载队列最前面优先下载当前图片
+	[[ImageDownloader photosDownloader] activeRequest:IMAGEURLString delegate:_imageDownloadReceiver];
+
+	// 插到下载队列最后面
+	[[ImageDownloader photosDownloader] queueImage:IMAGEURLString delegate:_imageDownloadReceiver];
+	
+	// 解除下载
+	[[ImageDownloader photosDownloader] removeDelegate:_imageDownloadReceiver forURL:IMAGEURLString];
+
+6. 图片下载成功失败处理方法
+
+- (void)imageDidDownload:(NSData *)imageData url:(NSString *)url {
+    NSLog(@"imageDidDownload: %@", url);
+    UIImage *image = [UIImage imageWithData:imageData];
+    if (image) {
+        [_image release];
+        _image = [image retain];
+        [self setNeedsDisplay];
+        [self setNeedsLayout];
+    }
+    
+}
+
+
+- (void)imageDownloadFailed:(NSError *)error url:(NSString *)url {
+    NSLog(@"imageDownloadFailed: %@, %@", url, [error localizedDescription]);
+}
