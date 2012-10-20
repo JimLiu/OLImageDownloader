@@ -107,6 +107,19 @@ static NSMutableDictionary* gNamedCaches = nil;
     }
 }
 
++ (void)removeCachedImages {
+    [ImageCache cacheWithName:@"photos"];
+    [ImageCache cacheWithName:@"thumbnails"];
+    [ImageCache cacheWithName:@"profileImages"];
+    [ImageCache cacheWithName:@"favicons"];
+    for (NSString *name in [gNamedCaches allKeys]) {
+        ImageCache *cache = [gNamedCaches objectForKey:name];
+        if (cache) {
+            [cache removeAll:YES];
+        }
+    }
+}
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 + (ImageCache*)sharedCache {
 	if (!gSharedCache) {

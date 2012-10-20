@@ -9,18 +9,19 @@
 #import <Foundation/Foundation.h>
 
 @interface ImageDownloadReceiver : NSObject {
-    id      imageContainer;
-	CGRect displayRect;
 	int failedCount;
 	float progress;
 	float max;
+    void (^_completionBlock)(NSData *imageData, NSString *url, NSError *error);
+    void (^_progressBlock)(float totalSize, float totalBytesRead);
 }
 
-@property (nonatomic, assign) id imageContainer;
+@property (copy) void (^completionBlock)(NSData *imageData, NSString *url, NSError *error);
+@property (copy) void (^progressBlock)(float totalSize, float totalBytesRead);
 @property (nonatomic, assign) CGRect displayRect;
 @property (nonatomic, assign) int failedCount; 
 
 
-- (id)initWithContainer:(id)container;
+- (id)init;
 
 @end

@@ -37,6 +37,8 @@
 
 + (ImageCache*)sharedCache;
 
++ (void)removeCachedImages;
+
 + (void)removeExpiredImages;
 
 + (void)setSharedCache:(ImageCache*)cache;

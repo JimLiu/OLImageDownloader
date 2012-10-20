@@ -30,6 +30,7 @@
 }
 
 - (void)dealloc {
+    [_request clearDelegatesAndCancel];
     [_url release];
     [_delegates release];
     [_downloadPath release];
@@ -101,26 +102,48 @@
     [_delegates removeAllObjects];
 }
 
-- (void)notifyDelegates:(NSData *)imageData {
-    
+- (void)notifyDelegatesWithError:(NSError *)error {
     for (id delegate in _delegates) {
-        if (delegate && [delegate respondsToSelector:@selector(imageDidDownload:url:)]) {
-            [delegate performSelector:@selector(imageDidDownload:url:) withObject:imageData withObject:_url];
+        if (delegate && [delegate respondsToSelector:@selector(imageDownloadFailed:url:)]) {
+            [delegate performSelector:@selector(imageDownloadFailed:url:) withObject:error  withObject:_url];
         }
     }
-    
     [_delegates removeAllObjects];
     
-    if (_imageRequestDelegate && [_imageRequestDelegate respondsToSelector:@selector(imageDidDownload:request:)]) {
-        [_imageRequestDelegate performSelector:@selector(imageDidDownload:request:) withObject:imageData withObject:self];
+    if (_imageRequestDelegate && [_imageRequestDelegate respondsToSelector:@selector(imageDownloadFailed:request:)]) {
+        [_imageRequestDelegate performSelector:@selector(imageDownloadFailed:request:) withObject:error  withObject:self];
     }
+}
+
+- (void)notifyDelegates:(NSData *)imageData {
+    UIImage *image = [UIImage imageWithData:imageData];
+    if (imageData && image)
+    {
+        for (id delegate in _delegates) {
+            if (delegate && [delegate respondsToSelector:@selector(imageDidDownload:url:)]) {
+                [delegate performSelector:@selector(imageDidDownload:url:) withObject:imageData withObject:_url];
+            }
+        }
+        
+        [_delegates removeAllObjects];
+        
+        if (_imageRequestDelegate && [_imageRequestDelegate respondsToSelector:@selector(imageDidDownload:request:)]) {
+            [_imageRequestDelegate performSelector:@selector(imageDidDownload:request:) withObject:imageData withObject:self];
+        }
+    }
+    else {
+        NSMutableDictionary *details = [NSMutableDictionary dictionary];
+        [details setValue:@"The image date is invalide." forKey:NSLocalizedDescriptionKey];
+        NSError *error = [NSError errorWithDomain:@"" code:500 userInfo:details];
+        [self notifyDelegatesWithError:error];
+    }
+    
 }
 
 
 -(void)backgroundLoadImageFromPath:(NSString*)path {
     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
-    NSData *responseData = [NSData dataWithContentsOfFile:path];
-    
+    NSData *responseData = [NSData dataWithContentsOfFile:path];  
     [self performSelectorOnMainThread:@selector(notifyDelegates:) withObject:responseData waitUntilDone:YES];
     [pool release];
 }
@@ -133,7 +156,7 @@
     }
     else {
         responseData = [request responseData];
-        
+       
         [self notifyDelegates:responseData];
     }
     _request = nil;
@@ -149,17 +172,7 @@
     [_downloadPath release];
     _downloadPath = nil;
 
-	for (id delegate in _delegates) {
-        if (delegate && [delegate respondsToSelector:@selector(imageDownloadFailed:url:)]) {
-            [delegate performSelector:@selector(imageDownloadFailed:url:) withObject:error  withObject:_url];
-        }
-    }
-    [_delegates removeAllObjects];
-    
-    if (_imageRequestDelegate && [_imageRequestDelegate respondsToSelector:@selector(imageDownloadFailed:request:)]) {
-        [_imageRequestDelegate performSelector:@selector(imageDownloadFailed:request:) withObject:error  withObject:self];
-    }
-    
+	[self notifyDelegatesWithError:error];    
 }
 
 

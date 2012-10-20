@@ -8,7 +8,6 @@
 
 #import "ImageDownloader.h"
 #import "ASIHTTPRequest.h"
-//#import "ZhiWeiboAppDelegate.h"
 
 #define MAX_CONNECTION 4
 
@@ -150,39 +149,43 @@ static NSMutableDictionary* gNamedDownloaders = nil;
 }
 
 
-- (void)notifyDelegate:(NSMutableArray*)args {
-    id delegate = [args objectAtIndex:1];
-    NSString *url = [args objectAtIndex:0];
-    NSData *imageData = args.count == 3 ? [args objectAtIndex:2] : nil;
+- (void)notifyDelegate:(NSMutableDictionary*)args {
+    id delegate = [args objectForKey:@"delegate"];
+    NSString *url = [args objectForKey:@"url"];
+    NSData *imageData = [args objectForKey:@"imageData"];
 	if (delegate && [delegate respondsToSelector:@selector(imageDidDownload:url:)]) {
         [delegate performSelector:@selector(imageDidDownload:url:) withObject:imageData withObject:url];
     }
 }
 
--(void)backgroundLoadLocalImage:(NSMutableArray*)args {
-    NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
-    NSData *imageData = [imageCache imageDataForURL:[args objectAtIndex:0]];
-    if (imageData) {
-        [args addObject:imageData];
-    }
-    [self performSelectorOnMainThread:@selector(notifyDelegate:) withObject:args waitUntilDone:YES];
-    [pool release];
-}
 
-- (void)activeRequest:(NSString*)url delegate:(id)delegate {
-    if (!url) {
-        return;
-    }
-    // load image from local file first!
-    // load image async.
-    if (imageCache) {
-        if ([imageCache hasImageForURL:url]) {
-            if (delegate) {
-                [self performSelectorInBackground:@selector(backgroundLoadLocalImage:) withObject:[NSMutableArray arrayWithObjects:url, delegate, nil]];
-            }
-            return; // local image loaded
+-(BOOL)backgroundLoadLocalImage:(NSMutableDictionary*)args {
+    BOOL result = NO;
+    NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
+    NSString *url = [args objectForKey:@"url"];
+    NSData *imageData = [imageCache imageDataForURL:url];
+    if (imageData) {
+        UIImage *image = [UIImage imageWithData:imageData];
+        if (!image) { //delete image which downloaded failed
+            [imageCache removeURL:url fromDisk:YES];
+        }
+        else {
+            [args setValue:imageData forKey:@"imageData"];
+            [self performSelectorOnMainThread:@selector(notifyDelegate:) withObject:args waitUntilDone:YES];
+            result = YES;
         }
     }
+    [pool release];
+    return result;
+}
+
+- (void)activeRequestInBackground:(NSMutableDictionary*)args {
+    NSString *url = [args objectForKey:@"url"];
+    id delegate = [args objectForKey:@"delegate"];
+    if (imageCache && [self backgroundLoadLocalImage:args]) {
+        return;
+    }
+
     
     ImageRequest *request = [self requestImage:url delegate:delegate];
     for (ImageRequest *activeRequest in activeRequests) {
@@ -208,18 +211,25 @@ static NSMutableDictionary* gNamedDownloaders = nil;
     [request startDownload];
 }
 
+- (void)activeRequest:(NSString*)url delegate:(id)delegate {
+    if (!url) {
+        return;
+    }
+    NSMutableDictionary *args = [NSMutableDictionary dictionary];
+    [args setValue:url forKey:@"url"];
+    if (delegate) {
+        [args setValue:delegate forKey:@"delegate"];
+    }
+    [self performSelectorInBackground:@selector(activeRequestInBackground:) withObject:args];
+}
 
-- (void)queueImage:(NSString*)url delegate:(id)delegate {
-    
-    // load image from local file first!
-    // load image async.
-    if (imageCache) {
-        if ([imageCache hasImageForURL:url]) {
-            if (delegate) {
-                [self performSelectorInBackground:@selector(backgroundLoadLocalImage:) withObject:[NSMutableArray arrayWithObjects:url, delegate, nil]];
-            }
-            return; // local image loaded
-        }
+
+
+- (void)queryImageInBackground:(NSMutableDictionary*)args {
+    NSString *url = [args objectForKey:@"url"];
+    id delegate = [args objectForKey:@"delegate"];
+    if (imageCache && [self backgroundLoadLocalImage:args]) {
+        return;
     }
     
     ImageRequest *request = [self requestImage:url delegate:delegate];
@@ -233,13 +243,28 @@ static NSMutableDictionary* gNamedDownloaders = nil;
     [self removeRequestFromDeactives:url];
     
     
-    if ([activeRequests count] <= MAX_CONNECTION) {
+    if ([activeRequests count] < MAX_CONNECTION) {
         [activeRequests addObject:request];
         [request startDownload];
     }
     else {
         [pendingRequests addObject:request];
     }
+}
+
+
+- (void)queueImage:(NSString*)url delegate:(id)delegate {
+    if (!url) {
+        return;
+    }
+    
+    NSMutableDictionary *args = [NSMutableDictionary dictionary];
+    [args setValue:url forKey:@"url"];
+    if (delegate) {
+        [args setValue:delegate forKey:@"delegate"];
+    }
+    
+    [self performSelectorInBackground:@selector(queryImageInBackground:) withObject:args];
     
     
 }
