@@ -363,7 +363,7 @@ static NSString *defaultUserAgent = nil;
 }
 
 - (void)cancel {
-    if (self.isFinished) return;
+    if (self.isFinished)
         return;
     [super cancel];
     if (self.cancelBlock)
@@ -376,7 +376,7 @@ static NSString *defaultUserAgent = nil;
         if (self.isExecuting) self.executing = NO;
         if (!self.isFinished) self.finished = YES;
     }
-    [self done];
+    [self reset];
 }
 
 - (void)moveTemporaryFileToDestination {

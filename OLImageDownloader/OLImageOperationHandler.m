@@ -38,8 +38,17 @@
     _downloader = nil;
 }
 
+- (void)cancel:(BOOL)cancelDownloading {
+    if (!cancelDownloading) {
+        [_downloader removeHandler:self]; // Only remove the handler, don't recieve the notification
+    }
+    else {
+        [_downloader cancelDownloading:self.url.absoluteString];
+    }
+}
+
 - (void)cancel {
-    
+    [self cancel:NO];
 }
 
 @end

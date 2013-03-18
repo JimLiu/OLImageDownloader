@@ -27,6 +27,14 @@ typedef void(^OLImageRequestCompletedBlock)(UIImage *image, NSData *data, NSErro
         completed:(OLImageRequestCompletedBlock)completedBlock
         cancelled:(void (^)())cancelBlock
        downloader:(OLImageDownloader *)downloader;
+
+// Cancel downloading, and don't notify this handler
+//      @param cancelDownloading:
+//                      YES, cancel downloading of the url;
+//                      NO,  continue downloading but don't notify
+- (void)cancel:(BOOL)cancelDownloading;
+
+// Cancel downloading, and don't notify this handler
 - (void)cancel;
 
 @end

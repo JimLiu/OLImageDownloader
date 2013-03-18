@@ -46,6 +46,10 @@ static NSMutableDictionary *gDownloaders;
     return self;
 }
 
++ (OLImageDownloader *)shared {
+    return [[self class]downloaderWithName:@"images"];
+}
+
 // Get a shared instance with name
 + (OLImageDownloader *)downloaderWithName:(NSString *)name {
     static dispatch_once_t once;
@@ -195,6 +199,30 @@ static NSMutableDictionary *gDownloaders;
         }
     });
     return downloading;
+}
+
+// canel a download by url
+- (void)cancelDownloading:(NSString *)url {
+    [self removeFromPendingsByUrl:url]; // remove from pending
+    __block OLImageRequestOperation *request = nil;
+    dispatch_barrier_sync(_barrierQueue, ^
+    {
+        for (OLImageRequestOperation * r in _activeRequests) {
+            if ([r.url.absoluteString isEqualToString:url]) {
+                request = r;
+                break;
+            }
+        }
+        
+        if (request) {
+            [_activeRequests removeObject:request];
+        }
+    });
+    if (request) { // If it's downloading, cancel it, and start downloading another url
+        [request cancel];
+        [self removeHandlersByUrl:url];
+        [self downloadAnotherImageFromPending];
+    }
 }
 
 - (NSMutableArray *)handlersForUrl:(NSString *)url {

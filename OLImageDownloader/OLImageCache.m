@@ -320,7 +320,7 @@ static dispatch_queue_t get_disk_io_queue() {
 
 - (id)initWithName:(NSString *)name {
     self = [self initWithMemoryCapacity:1024*1024   // 1MB mem cache
-                           diskCapacity:1024*1024*1 // 5MB disk cache
+                           diskCapacity:1024*1024*10 // 10MB disk cache
                               cacheName:name];
     if (self) {
     }

@@ -23,6 +23,10 @@
 
 - (id)initWithName:(NSString *)name;
 - (id)initWithImageCache:(OLImageCache *)imageCache;
+
+// Get an instance with default name "photos"
++ (OLImageDownloader *)shared;
+// Get an instance with a name which is the dictionary name that store the cached images
 + (OLImageDownloader *)downloaderWithName:(NSString *)name;
 
 - (OLImageOperationHandler *)downloadImageWithURL:(NSURL *)URL
@@ -37,5 +41,10 @@
 - (OLImageOperationHandler *)downloadImageWithURL:(NSURL *)URL
                                      highPriority:(BOOL)highPriority
                                         completed:(OLImageRequestCompletedBlock)completedBlock;
+
+- (void)removeHandler:(OLImageOperationHandler *)handler;
+
+// canel a download by url
+- (void)cancelDownloading:(NSString *)url;
 
 @end

@@ -1,56 +1,85 @@
-前提条件
-1. 需要依赖于ASIHttpRequest
+OLImageDownloader
+=========
+
+Asynchronous image downloader with cache support
+
+It provides:
+
+- An asynchronous image downloader
+- An asynchronous disk image caching with automatic cache expiration handling
+- Resuming interrupted downloads
+- Multi-Threaded downloading
+- Tracking download progress
+- LRU cache cleanup
+- Use GCD and ARC
+
+NOTE: Requires iOS 5.0
+
+How To Use
+----------
+
+### Using blocks
+
+With blocks, you can be notified about the image download progress and whenever the image retrival
+has completed with success or not:
+
+```objective-c
+#import "OLImageDownloader.h"
+
+@interface ActivityVideoCell ()
+@property (nonatomic, strong) UIImage *avatarImage;
+@property (nonatomic, strong) OLImageOperationHandler *avatarImageOperation;
+
+@end
 
 
-使用说明
-参考AppCell类
-
-1.头文件
-#import "ImageDownloader.h"
-#import "ImageDownloadReceiver.h"
-
-2. 定义全局变量
-    UIImage *_image; // 存放下载图片的变量
-    ImageDownloadReceiver *_imageDownloadReceiver; //图片下载接受器
-    
-3. 构造函数中实例化接收器
-	_imageDownloadReceiver = [[ImageDownloadReceiver alloc]initWithContainer:self];    
-    
-4. 对应的析构函数
-
-- (void)dealloc
-{
-    _imageDownloadReceiver.imageContainer = nil;
-    [_imageDownloadReceiver release];
-    [_image release];
-    [super dealloc];
-}
-
-5. 下载图片
-	// 插到下载队列最前面优先下载当前图片
-	[[ImageDownloader photosDownloader] activeRequest:IMAGEURLString delegate:_imageDownloadReceiver];
-
-	// 插到下载队列最后面
-	[[ImageDownloader photosDownloader] queueImage:IMAGEURLString delegate:_imageDownloadReceiver];
-	
-	// 解除下载
-	[[ImageDownloader photosDownloader] removeDelegate:_imageDownloadReceiver forURL:IMAGEURLString];
-
-6. 图片下载成功失败处理方法
-
-- (void)imageDidDownload:(NSData *)imageData url:(NSString *)url {
-    NSLog(@"imageDidDownload: %@", url);
-    UIImage *image = [UIImage imageWithData:imageData];
-    if (image) {
-        [_image release];
-        _image = [image retain];
-        [self setNeedsDisplay];
-        [self setNeedsLayout];
+- (void)downloadAvatarImage {
+    if (!_avatarImageOperation) {
+        NSURL *imageUrl = [NSURL URLWithString:self.layout.activity.user.avatarUrl];
+        OLImageDownloader *downloader = [OLImageDownloader shared];
+        _avatarImageOperation = [downloader downloadImageWithURL:imageUrl
+                                  completed:^(UIImage *image, NSData *data, NSError *error, BOOL finished)
+        {
+            if (image)
+            {
+                self.avatarImage = image;
+                [self setNeedsDisplay];
+            }
+            if (finished) {
+                _avatarImageOperation = nil;
+            }
+        }];
     }
-    
 }
 
+```
 
-- (void)imageDownloadFailed:(NSError *)error url:(NSString *)url {
-    NSLog(@"imageDownloadFailed: %@, %@", url, [error localizedDescription]);
-}
+Note: neither your success nor failure block will be call if your image request is canceled before completion.
+
+Installation
+------------
+It's easy to use this in your project, just copy all the files into your project.
+
+### Add dependencies
+
+- In you application project app’s target settings, find the "Build Phases" section and open the "Link Binary With Libraries" block:
+- Click the "+" button again and select the "ImageIO.framework", this is needed by the progressive download feature:
+
+### Import headers in your source files
+
+In the source files where you need to use the library, import the header file:
+
+```objective-c
+#import "OLImageDownloader.h"
+```
+
+## Reference codes
+
+- [SDWebImage](https://github.com/rs/sdwebimage).
+- [SDURLCache](https://github.com/steipete/SDURLCache).
+- [MKNetworkKit](https://github.com/MugunthKumar/MKNetworkKit).
+- [ASIHTTPRequest](http://allseeing-i.com/ASIHTTPRequest/).
+
+## Licenses
+
+All source code is licensed under the [MIT License](https://github.com/JimLiu/OLImageDownloader/blob/master/LICENSE).
